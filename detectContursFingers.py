@@ -104,12 +104,12 @@ while camera.isOpened():
 
             isFinishCal, cnt = calculateFingers(res, drawing)
             if triggerSwitch is True:
-                if isFinishCal is True and cnt <= 2:
-                    print(cnt)
+                if isFinishCal is True and cnt <= 5:
+                    print(cnt + 1)
 
         cv2.imshow('output', drawing)
     k = cv2.waitKey(10)
-    if k == 27:  # press ESC to exit
+    if k == 27:
         break
     elif k == ord('b'):
         bgModel = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold)
@@ -119,7 +119,5 @@ while camera.isOpened():
         bgModel = None
         triggerSwitch = False
         isBgCaptured = 0
-        print('!!!Reset BackGround!!!')
     elif k == ord('n'):
         triggerSwitch = True
-        print('!!!Trigger On!!!')
