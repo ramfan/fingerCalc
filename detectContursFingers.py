@@ -4,11 +4,11 @@ import cv2
 import numpy as np
 import copy
 import math
-# pylint disable no-member
-cap_region_x_begin = 0.5  # start point/total width
-cap_region_y_end = 0.8  # start point/total width
-threshold = 60  # BINARY threshold
-blurValue = 41  # GaussianBlur parameter
+
+cap_region_x_begin = 0.5
+cap_region_y_end = 0.8
+threshold = 60
+blurValue = 41
 bgSubThreshold = 50
 learningRate = 0
 
@@ -22,24 +22,20 @@ def printThreshold(thr):
 
 def removeBG(frame):
     fgmask = bgModel.apply(frame, learningRate=learningRate)
-    # kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (3, 3))
-    # res = cv2.morphologyEx(fgmask, cv2.MORPH_OPEN, kernel)
-
     kernel = np.ones((3, 3), np.uint8)
     fgmask = cv2.erode(fgmask, kernel, iterations=1)
     res = cv2.bitwise_and(frame, frame, mask=fgmask)
     return res
 
 
-def calculateFingers(res, drawing):  # -> finished bool, cnt: finger count
-    #  convexity defect
+def calculateFingers(res, drawing):
+
     hull = cv2.convexHull(res, returnPoints=False)
     if len(hull) > 1:
         defects = cv2.convexityDefects(res, hull)
-        if type(defects) != type(None):  # avoid crashing.   (BUG not found)
-
+        if type(defects) != type(None):
             cnt = 0
-            for i in range(defects.shape[0]):  # calculate the angle
+            for i in range(defects.shape[0]):
                 s, e, f, d = defects[i][0]
                 start = tuple(res[s][0])
                 end = tuple(res[e][0])
@@ -114,7 +110,6 @@ while camera.isOpened():
     elif k == ord('b'):
         bgModel = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold)
         isBgCaptured = 1
-        print('!!!Background Captured!!!')
     elif k == ord('r'):
         bgModel = None
         triggerSwitch = False
