@@ -4,6 +4,8 @@ import cv2
 import numpy as np
 import copy
 import math
+import win32api, win32con, win32gui
+import time, win32com.client
 
 cap_region_x_begin = 0.5
 cap_region_y_end = 0.8
@@ -17,10 +19,12 @@ triggerSwitch = False
 
 
 def printThreshold(thr):
+    """Метод типа void"""
     print("! Changed threshold to "+str(thr))
 
 
 def removeBG(frame):
+    """Метод удаляет фон и возвращает новое изображение"""
     fgmask = bgModel.apply(frame, learningRate=learningRate)
     kernel = np.ones((3, 3), np.uint8)
     fgmask = cv2.erode(fgmask, kernel, iterations=1)
@@ -29,7 +33,7 @@ def removeBG(frame):
 
 
 def calculateFingers(res, drawing):
-
+    """Метод возвращает true если палец обнаружен"""
     hull = cv2.convexHull(res, returnPoints=False)
     if len(hull) > 1:
         defects = cv2.convexityDefects(res, hull)
@@ -100,7 +104,10 @@ while camera.isOpened():
 
             isFinishCal, cnt = calculateFingers(res, drawing)
             if triggerSwitch is True:
-                if isFinishCal is True and cnt <= 5:
+                if isFinishCal is True and cnt <= 5 and cnt > 1:
+                    shell = win32com.client.Dispatch("WScript.Shell")
+                    shell.SendKeys(" ")
+                    time.sleep(0.2)
                     print(cnt + 1)
 
         cv2.imshow('output', drawing)
