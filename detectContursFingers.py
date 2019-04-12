@@ -7,13 +7,14 @@ import math
 import win32api, win32con, win32gui
 import time, win32com.client
 
+pastCoords = [0,0,0,0,0]
 cap_region_x_begin = 0.5
 cap_region_y_end = 0.8
 threshold = 60
 blurValue = 41
 bgSubThreshold = 50
 learningRate = 0
-
+counterIterable = 0
 isBgCaptured = 0
 triggerSwitch = False
 
@@ -34,11 +35,13 @@ def removeBG(frame):
 
 def calculateFingers(res, drawing):
     """Метод возвращает true если палец обнаружен"""
-    hull = cv2.convexHull(res, returnPoints=False)
+    hull = cv2.convexHull(res, returnPoints = False)
     if len(hull) > 1:
         defects = cv2.convexityDefects(res, hull)
         if type(defects) != type(None):
             cnt = 0
+            coordsArray = []
+            trigger = False
             for i in range(defects.shape[0]):
                 s, e, f, d = defects[i][0]
                 start = tuple(res[s][0])
@@ -53,12 +56,38 @@ def calculateFingers(res, drawing):
                                   (2 * b * c))  # cosine theorem
                 if angle <= math.pi / 2:  # angle less than 90 degree, treat as fingers
                     cnt += 1
+                    coordsArray.append([start, end])
+
                     cv2.circle(drawing, end, 8, [255, 0, 0], -1)
                     cv2.circle(drawing, start, 8, [255, 0, 0], -1)
-            return True, cnt
-    return False, 0
+            # print("------------------")
+            # print(coordsArray)
 
+            return True, cnt, coordsArray
 
+    return False, 0, []
+
+def defferetCoord(next, current):
+    if len(next) > 0 or len(current) > 0:
+        #print("NEXT",next)
+        #print("CURRENT",current)
+        for i in range(5):
+
+            if i < len(next) and i < len(current):
+                try:
+                    int(next[i][1][0] - current[i][1][0])
+                    if (next[i][1][0] - current[i][1][0]) > 10:
+                        if next[i][1][0] > current[i][1][0]:
+                            print("Swipe right")
+                            return True
+                    if (current[i][1][0] - next[i][1][0]) > 10:
+                        if next[i][1][0] < current[i][1][0]:
+                            print("Swipe left")
+                            return True
+                except Exception:
+                    return False
+
+    return False
 # Camera
 camera = cv2.VideoCapture(0)
 camera.set(10, 400)
@@ -87,6 +116,7 @@ while camera.isOpened():
         thresh1 = copy.deepcopy(thresh)
         contours, hierarchy = cv2.findContours(
             thresh1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+        fileName = "file" + str(len(contours))+".png"
         length = len(contours)
         maxArea = -1
         if length > 0:
@@ -94,6 +124,7 @@ while camera.isOpened():
                 temp = contours[i]
                 area = cv2.contourArea(temp)
                 if area > maxArea:
+
                     maxArea = area
                     ci = i
 
@@ -101,15 +132,18 @@ while camera.isOpened():
             hull = cv2.convexHull(res)
             drawing = np.zeros(img.shape, np.uint8)
             cv2.drawContours(drawing, [res], 0, (177, 255, 0), 2)
+            # cv2.imwrite(fileName, drawing)
+            isFinishCal, cnt, coords = calculateFingers(res, drawing)
 
-            isFinishCal, cnt = calculateFingers(res, drawing)
             if triggerSwitch is True:
-                if isFinishCal is True and cnt <= 5 and cnt > 1:
-                    shell = win32com.client.Dispatch("WScript.Shell")
-                    shell.SendKeys(" ")
-                    time.sleep(0.2)
-                    print(cnt + 1)
+                if isFinishCal is True and cnt <= 5 and cnt > 1 and defferetCoord(coords, pastCoords) == True:
+                    # shell = win32com.client.Dispatch("WScript.Shell")
+                    # shell.SendKeys(" ")
+                    # time.sleep(0.2)
+                    counterIterable += 1
 
+                    print(counterIterable)
+                pastCoords = coords
         cv2.imshow('output', drawing)
     k = cv2.waitKey(10)
     if k == 27:
