@@ -7,7 +7,7 @@ import math
 import win32api, win32con, win32gui
 import time, win32com.client
 
-pastCoords = [0,0,0,0,0]
+pastCoords = [0, 0, 0, 0, 0]
 cap_region_x_begin = 0.5
 cap_region_y_end = 0.8
 threshold = 60
@@ -69,8 +69,7 @@ def calculateFingers(res, drawing):
 
 def defferetCoord(next, current):
     if len(next) > 0 or len(current) > 0:
-        #print("NEXT",next)
-        #print("CURRENT",current)
+
         for i in range(5):
 
             if i < len(next) and i < len(current):
@@ -78,11 +77,11 @@ def defferetCoord(next, current):
                     int(next[i][1][0] - current[i][1][0])
                     if (next[i][1][0] - current[i][1][0]) > 10:
                         if next[i][1][0] > current[i][1][0]:
-                            print("Swipe right")
+                            print('Регистрация движения №% s : вправо'%counterIterable)
                             return True
                     if (current[i][1][0] - next[i][1][0]) > 10:
                         if next[i][1][0] < current[i][1][0]:
-                            print("Swipe left")
+                            print('Регистрация движения №% s : влево'%counterIterable)
                             return True
                 except Exception:
                     return False
@@ -142,7 +141,7 @@ while camera.isOpened():
                     # time.sleep(0.2)
                     counterIterable += 1
 
-                    print(counterIterable)
+                    # print(counterIterable)
                 pastCoords = coords
         cv2.imshow('output', drawing)
     k = cv2.waitKey(10)
