@@ -4,8 +4,7 @@ import cv2
 import numpy as np
 import copy
 import math
-import win32api, win32con, win32gui
-import time, win32com.client
+
 
 pastCoords = [0, 0, 0, 0, 0]
 cap_region_x_begin = 0.5
@@ -67,7 +66,7 @@ def calculateFingers(res, drawing):
 
     return False, 0, []
 
-def defferetCoord(next, current):
+def compareCoords(next, current):
     if len(next) > 0 or len(current) > 0:
 
         for i in range(5):
@@ -88,71 +87,72 @@ def defferetCoord(next, current):
 
     return False
 # Camera
-camera = cv2.VideoCapture(0)
-camera.set(10, 400)
-cv2.namedWindow('trackbar')
-cv2.createTrackbar('trh1', 'trackbar', threshold, 100, printThreshold)
+
+if __name__ == '__main__':
+
+    camera = cv2.VideoCapture(0)
+    camera.set(10, 400)
+    cv2.namedWindow('trackbar')
+    cv2.createTrackbar('trh1', 'trackbar', threshold, 100, printThreshold)
 
 
-while camera.isOpened():
-    ret, frame = camera.read()
-    frame = cv2.bilateralFilter(frame, 5, 500, 100)
-    frame = cv2.flip(frame, 1)
-    cv2.rectangle(frame, (int(cap_region_x_begin * frame.shape[1]), 0),
-                  (frame.shape[1], int(cap_region_y_end * frame.shape[0])), (255, 0, 0), 2)
-    cv2.imshow('original', frame)
+    while camera.isOpened():
+        ret, frame = camera.read()
+        frame = cv2.bilateralFilter(frame, 5, 500, 100)
+        frame = cv2.flip(frame, 1)
+        cv2.rectangle(frame, (int(cap_region_x_begin * frame.shape[1]), 0),
+                      (frame.shape[1], int(cap_region_y_end * frame.shape[0])), (255, 0, 0), 2)
+        cv2.imshow('original', frame)
 
-    if isBgCaptured == 1:
-        img = removeBG(frame)
-        img = img[0:int(cap_region_y_end * frame.shape[0]),
-                  int(cap_region_x_begin * frame.shape[1]):frame.shape[1]]
+        if isBgCaptured == 1:
+            img = removeBG(frame)
+            img = img[0:int(cap_region_y_end * frame.shape[0]),
+                      int(cap_region_x_begin * frame.shape[1]):frame.shape[1]]
 
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        blur = cv2.GaussianBlur(gray, (blurValue, blurValue), 0)
-        ret, thresh = cv2.threshold(blur, threshold, 255, cv2.THRESH_BINARY)
-        threshold = cv2.getTrackbarPos('trh1', 'trackbar')
+            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+            blur = cv2.GaussianBlur(gray, (blurValue, blurValue), 0)
+            ret, thresh = cv2.threshold(blur, threshold, 255, cv2.THRESH_BINARY)
+            threshold = cv2.getTrackbarPos('trh1', 'trackbar')
 
-        thresh1 = copy.deepcopy(thresh)
-        contours, hierarchy = cv2.findContours(
-            thresh1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-        fileName = "file" + str(len(contours))+".png"
-        length = len(contours)
-        maxArea = -1
-        if length > 0:
-            for i in range(length):
-                temp = contours[i]
-                area = cv2.contourArea(temp)
-                if area > maxArea:
+            thresh1 = copy.deepcopy(thresh)
+            contours, hierarchy = cv2.findContours(
+                thresh1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            fileName = "file" + str(len(contours))+".png"
+            length = len(contours)
+            maxArea = -1
+            if length > 0:
+                for i in range(length):
+                    temp = contours[i]
+                    area = cv2.contourArea(temp)
+                    if area > maxArea:
 
-                    maxArea = area
-                    ci = i
+                        maxArea = area
+                        ci = i
 
-            res = contours[ci]
-            hull = cv2.convexHull(res)
-            drawing = np.zeros(img.shape, np.uint8)
-            cv2.drawContours(drawing, [res], 0, (177, 255, 0), 2)
-            # cv2.imwrite(fileName, drawing)
-            isFinishCal, cnt, coords = calculateFingers(res, drawing)
+                res = contours[ci]
+                hull = cv2.convexHull(res)
+                drawing = np.zeros(img.shape, np.uint8)
+                cv2.drawContours(drawing, [res], 0, (177, 255, 0), 2)
+                # cv2.imwrite(fileName, drawing)
+                isFinishCal, cnt, coords = calculateFingers(res, drawing)
 
-            if triggerSwitch is True:
-                if isFinishCal is True and cnt <= 5 and cnt > 1 and defferetCoord(coords, pastCoords) == True:
-                    # shell = win32com.client.Dispatch("WScript.Shell")
-                    # shell.SendKeys(" ")
-                    # time.sleep(0.2)
-                    counterIterable += 1
+                if triggerSwitch is True:
+                    if isFinishCal is True and cnt <= 5 and cnt > 1 and compareCoords(coords, pastCoords) == True:
 
-                    # print(counterIterable)
-                pastCoords = coords
-        cv2.imshow('output', drawing)
-    k = cv2.waitKey(10)
-    if k == 27:
-        break
-    elif k == ord('b'):
-        bgModel = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold)
-        isBgCaptured = 1
-    elif k == ord('r'):
-        bgModel = None
-        triggerSwitch = False
-        isBgCaptured = 0
-    elif k == ord('n'):
-        triggerSwitch = True
+                        counterIterable += 1
+
+                        # print(counterIterable)
+                    pastCoords = coords
+            cv2.imshow('output', drawing)
+        k = cv2.waitKey(10)
+        if k == 27:
+            break
+        elif k == ord('b'):
+            bgModel = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold)
+            isBgCaptured = 1
+        elif k == ord('r'):
+            bgModel = None
+            triggerSwitch = False
+            isBgCaptured = 0
+        elif k == ord('n'):
+            triggerSwitch = True
