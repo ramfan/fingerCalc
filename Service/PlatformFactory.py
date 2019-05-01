@@ -1,5 +1,6 @@
 from sys import platform
 
+from Platform.Linux import Linux
 from Platform.Win32 import Win32
 
 
@@ -8,8 +9,6 @@ class PlatformFactory:
         if platform == "win32":
             return Win32()
         elif platform == "linux" or platform == "linux2":
-            return
-        elif platform == "darwin":
-            return
+            return Linux()
         else:
             raise Exception('Unknown platform!')
