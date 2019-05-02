@@ -23,7 +23,7 @@ def printThreshold(thr):
     print("! Changed threshold to "+str(thr))
 
 
-def removeBG(frame):
+def removeBG(frame, bgModel):
     """Метод удаляет фон и возвращает новое изображение"""
     fgmask = bgModel.apply(frame, learningRate=learningRate)
     kernel = np.ones((3, 3), np.uint8)
@@ -66,7 +66,7 @@ def calculateFingers(res, drawing):
 
     return False, 0, []
 
-def compareCoords(next, current):
+def compareCoords(next, current, counterIterable):
     if len(next) > 0 or len(current) > 0:
 
         for i in range(5):
@@ -88,13 +88,11 @@ def compareCoords(next, current):
     return False
 # Camera
 
-if __name__ == '__main__':
-
+def main(counterIterable, isBgCaptured, threshold, triggerSwitch, pastCoords):
     camera = cv2.VideoCapture(0)
     camera.set(10, 400)
     cv2.namedWindow('trackbar')
     cv2.createTrackbar('trh1', 'trackbar', threshold, 100, printThreshold)
-
 
     while camera.isOpened():
         ret, frame = camera.read()
@@ -105,9 +103,9 @@ if __name__ == '__main__':
         cv2.imshow('original', frame)
 
         if isBgCaptured == 1:
-            img = removeBG(frame)
+            img = removeBG(frame, bgModel)
             img = img[0:int(cap_region_y_end * frame.shape[0]),
-                      int(cap_region_x_begin * frame.shape[1]):frame.shape[1]]
+                  int(cap_region_x_begin * frame.shape[1]):frame.shape[1]]
 
             gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
             blur = cv2.GaussianBlur(gray, (blurValue, blurValue), 0)
@@ -117,7 +115,7 @@ if __name__ == '__main__':
             thresh1 = copy.deepcopy(thresh)
             contours, hierarchy = cv2.findContours(
                 thresh1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-            fileName = "file" + str(len(contours))+".png"
+            fileName = "file" + str(len(contours)) + ".png"
             length = len(contours)
             maxArea = -1
             if length > 0:
@@ -125,7 +123,6 @@ if __name__ == '__main__':
                     temp = contours[i]
                     area = cv2.contourArea(temp)
                     if area > maxArea:
-
                         maxArea = area
                         ci = i
 
@@ -137,8 +134,7 @@ if __name__ == '__main__':
                 isFinishCal, cnt, coords = calculateFingers(res, drawing)
 
                 if triggerSwitch is True:
-                    if isFinishCal is True and cnt <= 5 and cnt > 1 and compareCoords(coords, pastCoords) == True:
-
+                    if isFinishCal is True and cnt <= 5 and cnt > 1 and compareCoords(coords, pastCoords, counterIterable) == True:
                         counterIterable += 1
 
                         # print(counterIterable)
@@ -156,3 +152,7 @@ if __name__ == '__main__':
             isBgCaptured = 0
         elif k == ord('n'):
             triggerSwitch = True
+
+
+if __name__ == '__main__':
+    main(counterIterable, isBgCaptured, threshold, triggerSwitch, pastCoords)
