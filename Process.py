@@ -9,10 +9,13 @@ class Process:
 
     def __init__(self, cap_region_x_begin, cap_region_y_end, learningRate):
         self.__camera = cv2.VideoCapture(0)
-        self.__camera.set(100, 400)
+        self.__camera.set(10, 400)
         self._cap_region_x_begin = cap_region_x_begin
         self._cap_region_y_end = cap_region_y_end
         self._learningRate = learningRate
+        self.__counterIterable = 0
+        self.__pastCoords = [0, 0, 0, 0, 0]
+        self.__triggerSwitcher = False
 
     def __get_frame(self):
         ret, frame = self.__camera.read()
@@ -29,7 +32,6 @@ class Process:
         self.__camera.release()
 
     def calculateFingers(self, res, drawing):
-        """Метод возвращает true если палец обнаружен"""
         hull = cv2.convexHull(res, returnPoints=False)
         if len(hull) > 1:
             defects = cv2.convexityDefects(res, hull)
@@ -54,28 +56,25 @@ class Process:
 
                         cv2.circle(drawing, end, 8, [255, 0, 0], -1)
                         cv2.circle(drawing, start, 8, [255, 0, 0], -1)
-                # print("------------------")
-                # print(coordsArray)
-
                 return True, cnt, coordsArray
 
         return False, 0, []
 
-    def compareCoords(self, next, current, counterIterable):
-        if len(next) > 0 or len(current) > 0:
+    def compareCoords(self, next):
+        if len(next) > 0 or len(self.__pastCoords) > 0:
 
             for i in range(5):
 
-                if i < len(next) and i < len(current):
+                if i < len(next) and i < len(self.__pastCoords):
                     try:
-                        int(next[i][1][0] - current[i][1][0])
-                        if (next[i][1][0] - current[i][1][0]) > 10:
-                            if next[i][1][0] > current[i][1][0]:
-                                print('Регистрация движения №% s : вправо' % counterIterable)
+                        int(next[i][1][0] - self.__pastCoords[i][1][0])
+                        if (next[i][1][0] - self.__pastCoords[i][1][0]) > 10:
+                            if next[i][1][0] > self.__pastCoords[i][1][0]:
+                                print('Регистрация движения №% s : вправо' % self.__counterIterable)
                                 return True
-                        if (current[i][1][0] - next[i][1][0]) > 10:
-                            if next[i][1][0] < current[i][1][0]:
-                                print('Регистрация движения №% s : влево' % counterIterable)
+                        if (self.__pastCoords[i][1][0] - next[i][1][0]) > 10:
+                            if next[i][1][0] < self.__pastCoords[i][1][0]:
+                                print('Регистрация движения №% s : влево' % self.__counterIterable)
                                 return True
                     except Exception:
                         return False
@@ -121,3 +120,43 @@ class Process:
     def get_drawing(self, bgModel):
         img = self.__get_img(bgModel)
         return np.zeros(img.shape, np.uint8)
+
+    def __get_result_counter(self, bgModel):
+        contours = self.get_contours(bgModel)
+        maxArea = -1
+        length = len(contours)
+        ci = 0
+        res = None
+        if length > 0:
+            for i in range(length):
+                temp = contours[i]
+                area = cv2.contourArea(temp)
+                if area > maxArea:
+                    maxArea = area
+                    ci = i
+
+            res = contours[ci]
+            return res
+
+    def get_processed_img(self, bgModel):
+        contours = self.get_contours(bgModel)
+        length = len(contours)
+        res = self.__get_result_counter(bgModel)
+
+        drawing = self.get_drawing(bgModel)
+        if isinstance(res, type(None)) is False:
+            cv2.drawContours(drawing, [res], 0, (177, 255, 0), 2)
+            isFinishCal, cnt, coords = self.calculateFingers(res, drawing)
+            if self.__triggerSwitcher:
+                if isFinishCal is True and cnt <= 5 and cnt > 1 and self.compareCoords(coords) is True:
+                    self.__counterIterable += 1
+                self.__pastCoords = coords
+
+        cv2.imshow('output', drawing)
+
+    def set_trigger_switcher(self):
+        if self.__triggerSwitcher is False:
+            self.__triggerSwitcher = True
+
+        elif self.__triggerSwitcher is True:
+            self.__triggerSwitcher = False
