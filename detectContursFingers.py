@@ -19,7 +19,7 @@ def printThreshold(thr):
 
 def main(isBgCaptured, threshold):
 
-    cv2.namedWindow('trackbar')
+    cv2.namedWindow('trackbar', 1)
     cv2.createTrackbar('trh1', 'trackbar', threshold, 100, printThreshold)
     process = Process(cap_region_x_begin, cap_region_y_end, learningRate)
     while process.get_camera_status() is True:
