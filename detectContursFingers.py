@@ -25,17 +25,17 @@ def main(isBgCaptured, threshold):
     while process.get_camera_status() is True:
         process.start()
         if isBgCaptured == 1:
-            process.get_processed_img( bgModel)
+            process.get_processed_img()
         k = cv2.waitKey(10)
         if k == 27:
             process.close_camera()
             cv2.destroyAllWindows()
             break
         elif k == ord('b'):
-            bgModel = cv2.createBackgroundSubtractorMOG2(0, bgSubThreshold)
+            process.change_bgModel()
             isBgCaptured = 1
         elif k == ord('r'):
-            bgModel = None
+            process.set_default_bgModel()
             isBgCaptured = 0
         elif k == ord('n'):
            process.set_trigger_switcher()

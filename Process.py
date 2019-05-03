@@ -16,6 +16,14 @@ class Process:
         self.__counterIterable = 0
         self.__pastCoords = [0, 0, 0, 0, 0]
         self.__triggerSwitcher = False
+        self.__bgModel = None
+        self._bgSubThreshold = 50
+
+    def change_bgModel(self):
+        self.__bgModel = cv2.createBackgroundSubtractorMOG2(0, self._bgSubThreshold)
+
+    def set_default_bgModel(self):
+        self.__bgModel = None
 
     def __get_frame(self):
         ret, frame = self.__camera.read()
@@ -81,16 +89,16 @@ class Process:
 
         return
 
-    def __removeBG(self, frame, bgModel):
-        fgmask = bgModel.apply(frame, learningRate=self._learningRate)
+    def __removeBG(self, frame):
+        fgmask = self.__bgModel.apply(frame, learningRate=self._learningRate)
         kernel = np.ones((3, 3), np.uint8)
         fgmask = cv2.erode(fgmask, kernel, iterations=1)
         result = cv2.bitwise_and(frame, frame, mask=fgmask)
         return result
 
 
-    def get_contours(self, bgModel):
-        img = self.__get_img(bgModel)
+    def get_contours(self):
+        img = self.__get_img()
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         blurValue = 41
         blur = cv2.GaussianBlur(gray, (blurValue, blurValue), 0)
@@ -109,20 +117,20 @@ class Process:
                       (frame.shape[1], int(self._cap_region_y_end * frame.shape[0])), (255, 0, 0), 2)
         cv2.imshow('original', frame)
 
-    def __get_img(self, bgModel):
+    def __get_img(self):
         frame = self.__get_frame()
-        img = self.__removeBG(frame, bgModel)
+        img = self.__removeBG(frame)
         img = img[0:int(self._cap_region_y_end * frame.shape[0]),
               int(self._cap_region_x_begin * frame.shape[1]):frame.shape[1]]
 
         return img
 
-    def get_drawing(self, bgModel):
-        img = self.__get_img(bgModel)
+    def get_drawing(self):
+        img = self.__get_img()
         return np.zeros(img.shape, np.uint8)
 
-    def __get_result_counter(self, bgModel):
-        contours = self.get_contours(bgModel)
+    def __get_result_counter(self):
+        contours = self.get_contours()
         maxArea = -1
         length = len(contours)
         ci = 0
@@ -138,12 +146,12 @@ class Process:
             res = contours[ci]
             return res
 
-    def get_processed_img(self, bgModel):
-        contours = self.get_contours(bgModel)
+    def get_processed_img(self ):
+        contours = self.get_contours()
         length = len(contours)
-        res = self.__get_result_counter(bgModel)
+        res = self.__get_result_counter()
 
-        drawing = self.get_drawing(bgModel)
+        drawing = self.get_drawing()
         if isinstance(res, type(None)) is False:
             cv2.drawContours(drawing, [res], 0, (177, 255, 0), 2)
             isFinishCal, cnt, coords = self.calculateFingers(res, drawing)
