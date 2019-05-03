@@ -4,6 +4,8 @@ import cv2
 import numpy as np
 import copy
 
+threshold = 60
+
 
 class Process:
 
@@ -18,6 +20,11 @@ class Process:
         self.__triggerSwitcher = False
         self.__bgModel = None
         self._bgSubThreshold = 50
+        cv2.namedWindow('trackbar', 1)
+        cv2.createTrackbar('trh1', 'trackbar', threshold, 100, self.__printThreshold)
+
+    def __printThreshold (self, thr):
+        print("! Changed threshold to " + str(thr))
 
     def change_bgModel(self):
         self.__bgModel = cv2.createBackgroundSubtractorMOG2(0, self._bgSubThreshold)

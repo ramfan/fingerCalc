@@ -6,21 +6,11 @@ from Process import Process
 
 cap_region_x_begin = 0.5
 cap_region_y_end = 0.8
-threshold = 60
-bgSubThreshold = 50
+
 learningRate = 0
 isBgCaptured = 0
 
-
-def printThreshold(thr):
-    """Метод типа void"""
-    print("! Changed threshold to "+str(thr))
-
-
-def main(isBgCaptured, threshold):
-
-    cv2.namedWindow('trackbar', 1)
-    cv2.createTrackbar('trh1', 'trackbar', threshold, 100, printThreshold)
+def main(isBgCaptured):
     process = Process(cap_region_x_begin, cap_region_y_end, learningRate)
     while process.get_camera_status() is True:
         process.start()
@@ -42,4 +32,4 @@ def main(isBgCaptured, threshold):
 
 
 if __name__ == '__main__':
-    main(isBgCaptured, threshold)
+    main(isBgCaptured)
