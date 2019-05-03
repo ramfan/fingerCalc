@@ -11,7 +11,6 @@ pastCoords = [0, 0, 0, 0, 0]
 cap_region_x_begin = 0.5
 cap_region_y_end = 0.8
 threshold = 60
-blurValue = 41
 bgSubThreshold = 50
 learningRate = 0
 counterIterable = 0
@@ -28,27 +27,15 @@ def main(counterIterable, isBgCaptured, threshold, triggerSwitch, pastCoords):
     camera.set(10, 400)
     cv2.namedWindow('trackbar')
     cv2.createTrackbar('trh1', 'trackbar', threshold, 100, printThreshold)
-    process = Process()
+    process = Process(cap_region_x_begin, cap_region_y_end, learningRate)
     while process.get_camera_status() is True:
-        frame = process.get_frame()
-        cv2.rectangle(frame, (int(cap_region_x_begin * frame.shape[1]), 0),
-                      (frame.shape[1], int(cap_region_y_end * frame.shape[0])), (255, 0, 0), 2)
-        cv2.imshow('original', frame)
+        process.start()
         if isBgCaptured == 1:
-            img = process.removeBG(frame, bgModel, learningRate)
-            img = img[0:int(cap_region_y_end * frame.shape[0]),
-                  int(cap_region_x_begin * frame.shape[1]):frame.shape[1]]
 
-            gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-            blur = cv2.GaussianBlur(gray, (blurValue, blurValue), 0)
-            ret, thresh = cv2.threshold(blur, threshold, 255, cv2.THRESH_BINARY)
-            threshold = cv2.getTrackbarPos('trh1', 'trackbar')
-
-            thresh1 = copy.deepcopy(thresh)
-            contours, hierarchy = cv2.findContours(
-                thresh1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+            contours = process.get_contours(bgModel)
             length = len(contours)
             maxArea = -1
+            ci = 0
             if length > 0:
                 for i in range(length):
                     temp = contours[i]
@@ -59,16 +46,13 @@ def main(counterIterable, isBgCaptured, threshold, triggerSwitch, pastCoords):
 
                 res = contours[ci]
                 hull = cv2.convexHull(res)
-                drawing = np.zeros(img.shape, np.uint8)
+                drawing = process.get_drawing(bgModel)
                 cv2.drawContours(drawing, [res], 0, (177, 255, 0), 2)
-                # cv2.imwrite(fileName, drawing)
                 isFinishCal, cnt, coords = process.calculateFingers(res, drawing)
 
                 if triggerSwitch is True:
                     if isFinishCal is True and cnt <= 5 and cnt > 1 and process.compareCoords(coords, pastCoords, counterIterable) == True:
                         counterIterable += 1
-
-                        # print(counterIterable)
                     pastCoords = coords
             cv2.imshow('output', drawing)
         k = cv2.waitKey(10)

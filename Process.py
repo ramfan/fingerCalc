@@ -2,15 +2,19 @@ import math
 
 import cv2
 import numpy as np
+import copy
 
 
 class Process:
 
-    def __init__(self):
+    def __init__(self, cap_region_x_begin, cap_region_y_end, learningRate):
         self.__camera = cv2.VideoCapture(0)
         self.__camera.set(100, 400)
+        self._cap_region_x_begin = cap_region_x_begin
+        self._cap_region_y_end = cap_region_y_end
+        self._learningRate = learningRate
 
-    def get_frame(self):
+    def __get_frame(self):
         ret, frame = self.__camera.read()
         if ret:
             pass
@@ -32,7 +36,6 @@ class Process:
             if type(defects) != type(None):
                 cnt = 0
                 coordsArray = []
-                trigger = False
                 for i in range(defects.shape[0]):
                     s, e, f, d = defects[i][0]
                     start = tuple(res[s][0])
@@ -79,10 +82,42 @@ class Process:
 
         return
 
-    def removeBG(self, frame, bgModel, learningRate):
-        """Метод удаляет фон и возвращает новое изображение"""
-        fgmask = bgModel.apply(frame, learningRate=learningRate)
+    def __removeBG(self, frame, bgModel):
+        fgmask = bgModel.apply(frame, learningRate=self._learningRate)
         kernel = np.ones((3, 3), np.uint8)
         fgmask = cv2.erode(fgmask, kernel, iterations=1)
-        res = cv2.bitwise_and(frame, frame, mask=fgmask)
-        return res
+        result = cv2.bitwise_and(frame, frame, mask=fgmask)
+        return result
+
+
+    def get_contours(self, bgModel):
+        img = self.__get_img(bgModel)
+        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+        blurValue = 41
+        blur = cv2.GaussianBlur(gray, (blurValue, blurValue), 0)
+        threshold = cv2.getTrackbarPos('trh1', 'trackbar')
+        ret, thresh = cv2.threshold(blur, threshold, 255, cv2.THRESH_BINARY)
+
+        thresh1 = copy.deepcopy(thresh)
+        contours, hierarchy = cv2.findContours(
+            thresh1, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+
+        return contours
+
+    def start(self):
+        frame = self.__get_frame()
+        cv2.rectangle(frame, (int(self._cap_region_x_begin * frame.shape[1]), 0),
+                      (frame.shape[1], int(self._cap_region_y_end * frame.shape[0])), (255, 0, 0), 2)
+        cv2.imshow('original', frame)
+
+    def __get_img(self, bgModel):
+        frame = self.__get_frame()
+        img = self.__removeBG(frame, bgModel)
+        img = img[0:int(self._cap_region_y_end * frame.shape[0]),
+              int(self._cap_region_x_begin * frame.shape[1]):frame.shape[1]]
+
+        return img
+
+    def get_drawing(self, bgModel):
+        img = self.__get_img(bgModel)
+        return np.zeros(img.shape, np.uint8)
