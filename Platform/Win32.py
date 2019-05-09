@@ -30,8 +30,11 @@ try:
         def arrow_up(self):
             self.__shell_dispatcher_actions("{UP}")
 
-        def win_arrow_right(self):
+        def swipe_workspace_right(self):
             hotkey('ctrl', 'win', 'right')
+
+        def swipe_workspace_left(self):
+            hotkey('ctrl', 'win', 'left')
 except ImportError:
     class Win32:
         def __init__(self):

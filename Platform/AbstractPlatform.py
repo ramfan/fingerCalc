@@ -5,7 +5,7 @@ from abc import ABC, abstractmethod
 class AbstractPlatform:
 
     def set_sleep(self):
-        time.sleep(0.2)
+        time.sleep(1)
 
     @abstractmethod
     def press_space(self):
@@ -25,4 +25,12 @@ class AbstractPlatform:
 
     @abstractmethod
     def arrow_left(self):
+        pass
+
+    @abstractmethod
+    def swipe_workspace_left(self):
+        pass
+
+    @abstractmethod
+    def swipe_workspace_right(self):
         pass

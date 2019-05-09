@@ -4,6 +4,8 @@ import cv2
 import numpy as np
 import copy
 
+from Service.PlatformFactory import PlatformFactory
+
 threshold = 60
 
 
@@ -20,11 +22,12 @@ class Process:
         self.__triggerSwitcher = False
         self.__bgModel = None
         self._bgSubThreshold = 50
+        self._platform = PlatformFactory().getClassByPlatform()
         cv2.namedWindow('trackbar', 1)
         cv2.createTrackbar('trh1', 'trackbar', threshold, 100, self.__printThreshold)
 
     def __printThreshold (self, thr):
-        print("! Changed threshold to " + str(thr))
+        print("Изменено пороговое значение на " + str(thr))
 
     def change_bgModel(self):
         self.__bgModel = cv2.createBackgroundSubtractorMOG2(0, self._bgSubThreshold)
@@ -46,7 +49,7 @@ class Process:
     def close_camera(self):
         self.__camera.release()
 
-    def calculateFingers(self, res, drawing):
+    def __calculateFingers(self, res, drawing):
         hull = cv2.convexHull(res, returnPoints=False)
         if len(hull) > 1:
             defects = cv2.convexityDefects(res, hull)
@@ -64,8 +67,8 @@ class Process:
                                   (far[1] - start[1]) ** 2)
                     c = math.sqrt((end[0] - far[0]) ** 2 + (end[1] - far[1]) ** 2)
                     angle = math.acos((b ** 2 + c ** 2 - a ** 2) /
-                                      (2 * b * c))  # cosine theorem
-                    if angle <= math.pi / 2:  # angle less than 90 degree, treat as fingers
+                                      (2 * b * c))
+                    if angle <= math.pi / 2:
                         cnt += 1
                         coordsArray.append([start, end])
 
@@ -75,36 +78,39 @@ class Process:
 
         return False, 0, []
 
-    def compareCoords(self, next):
+    def __compareCoords(self, next):
         if len(next) > 0 or len(self.__pastCoords) > 0:
 
             for i in range(5):
 
                 if i < len(next) and i < len(self.__pastCoords):
                     try:
-                        int(next[i][1][0] - self.__pastCoords[i][1][0])
-                        if (next[i][1][0] - self.__pastCoords[i][1][0]) > 10:
-                            if next[i][1][0] > self.__pastCoords[i][1][0]:
+                        int(next[i][0][0] - self.__pastCoords[i][0][0])
+                        if (next[i][0][0] - self.__pastCoords[i][0][0]) > 25 and (next[i][1][0] - self.__pastCoords[i][1][0]) > 25:
+                            if next[i][0][0] > self.__pastCoords[i][0][0]:
                                 print('Регистрация движения №% s : вправо' % self.__counterIterable)
+                                self._platform.swipe_workspace_right()
                                 return True
-                        if (self.__pastCoords[i][1][0] - next[i][1][0]) > 10:
-                            if next[i][1][0] < self.__pastCoords[i][1][0]:
+                        if (self.__pastCoords[i][0][0] - next[i][0][0]) > 25 and (self.__pastCoords[i][1][0] - next[i][1][0]) > 25:
+                            if next[i][0][0] < self.__pastCoords[i][0][0]:
                                 print('Регистрация движения №% s : влево' % self.__counterIterable)
+                                self._platform.swipe_workspace_left()
                                 return True
                     except Exception:
                         return False
 
-        return
+        return False
 
     def __removeBG(self, frame):
         fgmask = self.__bgModel.apply(frame, learningRate=self._learningRate)
-        kernel = np.ones((3, 3), np.uint8)
+        kernel = np.ones((5, 5), np.uint8)
+        cv2.dilate(fgmask, kernel, iterations=1)
         fgmask = cv2.erode(fgmask, kernel, iterations=1)
         result = cv2.bitwise_and(frame, frame, mask=fgmask)
         return result
 
 
-    def get_contours(self):
+    def __get_contours(self):
         img = self.__get_img()
         gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
         blurValue = 41
@@ -129,15 +135,14 @@ class Process:
         img = self.__removeBG(frame)
         img = img[0:int(self._cap_region_y_end * frame.shape[0]),
               int(self._cap_region_x_begin * frame.shape[1]):frame.shape[1]]
-
         return img
 
-    def get_drawing(self):
+    def __get_drawing(self):
         img = self.__get_img()
         return np.zeros(img.shape, np.uint8)
 
     def __get_result_counter(self):
-        contours = self.get_contours()
+        contours = self.__get_contours()
         maxArea = -1
         length = len(contours)
         ci = 0
@@ -154,16 +159,16 @@ class Process:
             return res
 
     def get_processed_img(self ):
-        contours = self.get_contours()
+        contours = self.__get_contours()
         length = len(contours)
         res = self.__get_result_counter()
 
-        drawing = self.get_drawing()
+        drawing = self.__get_drawing()
         if isinstance(res, type(None)) is False:
             cv2.drawContours(drawing, [res], 0, (177, 255, 0), 2)
-            isFinishCal, cnt, coords = self.calculateFingers(res, drawing)
+            isFinishCal, cnt, coords = self.__calculateFingers(res, drawing)
             if self.__triggerSwitcher:
-                if isFinishCal is True and cnt <= 5 and cnt > 1 and self.compareCoords(coords) is True:
+                if isFinishCal is True and cnt <= 5 and cnt > 1 and self.__compareCoords(coords) is True:
                     self.__counterIterable += 1
                 self.__pastCoords = coords
 

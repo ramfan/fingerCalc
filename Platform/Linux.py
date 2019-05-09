@@ -31,3 +31,21 @@ class Linux(AbstractPlatform):
     def arrow_up(self):
         arrow_up = '''keydown Up keyup Up'''
         self.__key_press(arrow_up)
+
+    def swipe_workspace_left(self):
+        swipe = '''keydown Control_L
+                    keydown Alt_L
+                    keydown Left
+                    keyup Left
+                    keyup Control_L
+                    keyup Alt_L'''
+        self.__key_press(swipe)
+
+    def swipe_workspace_right(self):
+        swipe = '''keydown Control_L
+                    keydown Alt_L
+                    keydown Right
+                    keyup Right
+                    keyup Control_L
+                    keyup Alt_L'''
+        self.__key_press(swipe)
